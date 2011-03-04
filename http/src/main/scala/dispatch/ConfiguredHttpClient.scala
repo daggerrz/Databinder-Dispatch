@@ -9,7 +9,7 @@ import org.apache.http.params.{HttpProtocolParams, BasicHttpParams, HttpParams}
 
 /** Basic extension of DefaultHttpClient defaulting to Http 1.1, UTF8, and no Expect-Continue.
     Scopes authorization credentials to particular requests thorugh a DynamicVariable. */
-class ConfiguredHttpClient extends DefaultHttpClient { 
+class ConfiguredHttpClient extends DefaultHttpClient with HttpCredentials { 
   protected def configureProxy(params: HttpParams) = {
     val sys = System.getProperties()
     val host = sys.getProperty("https.proxyHost", sys.getProperty("http.proxyHost"))

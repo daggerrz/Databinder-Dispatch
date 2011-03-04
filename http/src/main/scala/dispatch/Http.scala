@@ -8,6 +8,7 @@ import org.apache.http.{HttpHost,HttpRequest,HttpResponse,HttpEntity}
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.client.methods.HttpRequestBase
 import org.apache.http.client.utils.URLEncodedUtils
+import org.apache.http.client.HttpClient
 import org.apache.http.auth.AuthScope
 import org.apache.http.params.HttpProtocolParams
 
@@ -30,7 +31,7 @@ object Http extends Http with thread.Safety
 trait BlockingHttp extends HttpExecutor with BlockingCallback {
   val client = make_client
   /** Defaults to dispatch.ConfiguredHttpClient, override to customize. */
-  def make_client = new ConfiguredHttpClient
+  def make_client : HttpClient = new ConfiguredHttpClient
 
   def exception[T](e: Exception) = throw(e)
   
@@ -43,10 +44,21 @@ trait BlockingHttp extends HttpExecutor with BlockingCallback {
                  req: HttpRequestBase, block: HttpResponse => T) =
     pack(req, block(
       credsopt.map { creds =>
-        client.credentials.withValue(Some((
-          new AuthScope(host.getHostName, host.getPort), creds)
-        ))(execute(host, req))
+      	client match {
+			case withCreds : HttpCredentials =>
+              withCreds.credentials.withValue(Some((
+                new AuthScope(host.getHostName, host.getPort), creds)
+              ))(execute(host, req))
+			case _ =>
+			  // Throw?
+			  execute(host, req)
+      	}
       } getOrElse { execute(host, req) }
     ))
   def pack[T](req: HttpRequestBase, result: => T): HttpPackage[T]
+}
+
+trait HttpCredentials {
+	self: HttpClient =>
+	def credentials: scala.util.DynamicVariable[Option[(AuthScope, Credentials)]]
 }
